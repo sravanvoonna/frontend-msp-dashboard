@@ -11,6 +11,8 @@ import {
   Legend
 } from "recharts";
 
+const API_BASE_URL = "https://backend-msp-dashboard.onrender.com";
+
 // Inline SVG Icons for premium look
 const SproutIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 10 3 3 3-3-3-3z"/><path d="M12 22V10"/><path d="M12 8a3 3 0 0 0-3-3H4v3a3 3 0 0 0 3 3h5"/><path d="M12 14a3 3 0 0 1 3-3h5v3a3 3 0 0 1-3 3h-5"/></svg>
@@ -87,20 +89,20 @@ function App() {
   const loadCrops = async () => {
     try {
       setError("");
-      const res = await axios.get("http://127.0.0.1:5000/crops");
+      const res = await axios.get(`${API_BASE_URL}/crops`);
       setCrops(res.data);
       setFilteredCrops(res.data);
       if (res.data.length > 0) {
         setCrop(res.data[0].displayName);
       }
     } catch (err) {
-      setError("Unable to load crop data. Please make sure the Flask backend is running on port 5000.");
+      setError("Unable to load crop data. Please check that the API service is running.");
     }
   };
 
   const loadBestCrop = async (targetYear) => {
     try {
-      const res = await axios.get(`http://127.0.0.1:5000/bestcrop?year=${targetYear}`);
+      const res = await axios.get(`${API_BASE_URL}/bestcrop?year=${targetYear}`);
       setBestCrop(res.data);
     } catch (err) {
       setError("Unable to load best crop recommendation.");
@@ -119,7 +121,7 @@ function App() {
 
     try {
       const res = await axios.get(
-        `http://127.0.0.1:5000/predict?crop=${encodeURIComponent(crop)}&year=${year}`
+        `${API_BASE_URL}/predict?crop=${encodeURIComponent(crop)}&year=${year}`
       );
       setPrediction(res.data);
     } catch (err) {
@@ -137,7 +139,7 @@ function App() {
 
     try {
       const res = await axios.get(
-        `http://127.0.0.1:5000/forecast?crop=${encodeURIComponent(cropDisplayName)}`
+        `${API_BASE_URL}/forecast?crop=${encodeURIComponent(cropDisplayName)}`
       );
       setForecast(res.data);
     } catch (err) {
