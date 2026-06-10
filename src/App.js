@@ -51,16 +51,20 @@ function App() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingStep, setLoadingStep] = useState("Connecting to server...");
+
   // Load basic details on mount
   useEffect(() => {
-    loadCrops();
-    loadBestCrop(bestCropYear);
+    initializeData();
   }, []);
 
   // Update best crop when year changes
   useEffect(() => {
-    loadBestCrop(bestCropYear);
-  }, [bestCropYear]);
+    if (!initialLoading && crops.length > 0) {
+      loadBestCrop(bestCropYear);
+    }
+  }, [bestCropYear, initialLoading]);
 
   // Filter crops list when selectedCategory changes
   useEffect(() => {
@@ -86,17 +90,44 @@ function App() {
     }
   }, [crop]);
 
-  const loadCrops = async () => {
-    try {
-      setError("");
-      const res = await axios.get(`${API_BASE_URL}/crops`);
-      setCrops(res.data);
-      setFilteredCrops(res.data);
-      if (res.data.length > 0) {
-        setCrop(res.data[0].displayName);
+  const loadCropsWithRetry = async (retries = 5, delay = 6000) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        setError("");
+        const res = await axios.get(`${API_BASE_URL}/crops`);
+        if (res.data && res.data.length > 0) {
+          setCrops(res.data);
+          setFilteredCrops(res.data);
+          setCrop(res.data[0].displayName);
+          return res.data;
+        }
+        throw new Error("No crop data returned");
+      } catch (err) {
+        console.warn(`Attempt ${i + 1} to load crops failed. Retrying...`);
+        if (i === retries - 1) {
+          throw err;
+        }
+        setLoadingStep(`Waking up the prediction engine... (Attempt ${i + 2}/${retries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
+    }
+  };
+
+  const initializeData = async () => {
+    setInitialLoading(true);
+    setError("");
+    try {
+      setLoadingStep("Waking up the prediction engine (this can take up to 60 seconds)...");
+      await loadCropsWithRetry(5, 6000);
+      
+      setLoadingStep("Loading recommendations...");
+      await loadBestCrop(bestCropYear);
+      
+      setInitialLoading(false);
     } catch (err) {
-      setError("Unable to load crop data. Please check that the API service is running.");
+      console.error("Initialization failed:", err);
+      setError("Could not connect to the API server. The server might be sleeping or offline.");
+      setInitialLoading(false);
     }
   };
 
@@ -236,6 +267,55 @@ function App() {
 
   const categories = ["All", "Kharif Crops", "Rabi Crops", "Other Crops"];
 
+  if (initialLoading) {
+    return (
+      <div className="loading-screen">
+        <div className="glass-card loading-card">
+          <div className="loading-logo">🌾</div>
+          <h2 style={{ color: "#fff", fontWeight: 700, margin: "10px 0" }}>MSP Analytics Dashboard</h2>
+          <div className="loading-progress-bar">
+            <div className="loading-progress-fill"></div>
+          </div>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: "1.6" }}>
+            {loadingStep}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (crops.length === 0) {
+    return (
+      <div className="loading-screen">
+        <div className="glass-card loading-card" style={{ borderLeft: "4px solid var(--accent-red)" }}>
+          <div style={{ fontSize: "3rem", marginBottom: "10px" }}>⚠️</div>
+          <h2 style={{ color: "#fff", fontWeight: 700, margin: "10px 0" }}>Connection Failed</h2>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: "1.6" }}>
+            Unable to connect to the backend prediction service. The server might be booting up or temporarily offline.
+          </p>
+          {error && (
+            <div style={{ 
+              background: "rgba(239, 68, 68, 0.1)", 
+              border: "1px solid rgba(239, 68, 68, 0.2)", 
+              color: "#fca5a5", 
+              padding: "12px", 
+              borderRadius: "var(--border-radius-sm)", 
+              fontSize: "0.85rem",
+              width: "100%",
+              wordBreak: "break-word",
+              marginTop: "10px"
+            }}>
+              {error}
+            </div>
+          )}
+          <button className="btn btn-primary" onClick={initializeData} style={{ marginTop: "20px", width: "auto", padding: "12px 30px" }}>
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-container">
       {/* Title Header */}
@@ -261,7 +341,7 @@ function App() {
           <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: 500 }}>
             API Connected
           </span>
-          <button className="btn btn-outline" style={{ padding: "6px 10px", marginLeft: "10px" }} onClick={loadCrops} title="Refresh Crop Data">
+          <button className="btn btn-outline" style={{ padding: "6px 10px", marginLeft: "10px" }} onClick={initializeData} title="Refresh Crop Data">
             <RefreshIcon />
           </button>
         </div>
