@@ -330,18 +330,7 @@ function App() {
           </div>
         </div>
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <span style={{
-            display: "inline-block",
-            width: "8px",
-            height: "8px",
-            borderRadius: "50%",
-            backgroundColor: "var(--primary-accent)",
-            boxShadow: "0 0 8px var(--primary-accent)"
-          }}></span>
-          <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: 500 }}>
-            API Connected
-          </span>
-          <button className="btn btn-outline" style={{ padding: "6px 10px", marginLeft: "10px" }} onClick={initializeData} title="Refresh Crop Data">
+          <button className="btn btn-outline" style={{ padding: "6px 10px" }} onClick={initializeData} title="Refresh Crop Data">
             <RefreshIcon />
           </button>
         </div>
